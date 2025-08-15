@@ -11,8 +11,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.14" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.19" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="8.0.19" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.19" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="8.0.19" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
 
@@ -42,7 +44,7 @@
 	  <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
 
 	  <!-- Configuration -->
-	  <PackageReference Include="DotNetEnv" Version="3.0.0" />
+	  <PackageReference Include="DotNetEnv" Version="3.1.1" />
 
 	  <!-- Health Checks -->
 	  <PackageReference Include="AspNetCore.HealthChecks.Rabbitmq" Version="7.0.0" />
