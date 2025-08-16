@@ -72,7 +72,6 @@ RUN echo "=== Starting publish ===" && \
         -o /app/publish \
         /p:UseAppHost=false \
         --no-restore \
-        --no-build \
         --verbosity normal || \
     (echo "=== PUBLISH FAILED ===" && \
      echo "=== Checking publish directory ===" && ls -la /app/ && \
