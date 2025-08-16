@@ -32,8 +32,7 @@ RUN echo "=== Checking for csproj files ===" && find . -name "*.csproj" | head -
 # Configure NuGet authentication if GitHub credentials are provided
 RUN if [ ! -z "$GITHUB_USERNAME" ] && [ ! -z "$GITHUB_TOKEN" ]; then \
         echo "=== Configuring GitHub NuGet source ===" && \
-        dotnet nuget add source "https://nuget.pkg.github.com/$GITHUB_USERNAME/index.json" \
-            --name github \
+        dotnet nuget update source github \
             --username "$GITHUB_USERNAME" \
             --password "$GITHUB_TOKEN" \
             --store-password-in-clear-text && \
