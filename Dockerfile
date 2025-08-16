@@ -26,7 +26,7 @@ RUN echo "=== Environment Check ===" && \
     echo "GITHUB_TOKEN: [REDACTED]" && \
     echo "=== Listing root directory ===" && ls -la
 
-RUN echo "=== Listing DeliveryValidationService.Api directory ===" && ls -la DeliveryValidationService.Api/
+RUN echo "=== Listing DeliveryValidationService directory ===" && ls -la DeliveryValidationService/
 RUN echo "=== Checking for csproj files ===" && find . -name "*.csproj" | head -10
 
 # Configure NuGet authentication if GitHub credentials are provided
@@ -51,32 +51,16 @@ RUN echo "=== Current working directory contents ===" && \
     echo "=== Looking for .csproj files ===" && \
     find . -name "*.csproj" -type f
 
-# Restore with enhanced error handling - try both possible paths
+# Restore with enhanced error handling - use correct path from repo root
 RUN echo "=== Starting restore ===" && \
-    if [ -f "DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" ]; then \
-        echo "Found project at DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" && \
-        dotnet restore "DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" --verbosity normal --no-cache; \
-    elif [ -f "DeliveryValidationService.Api.csproj" ]; then \
-        echo "Found project at DeliveryValidationService.Api.csproj" && \
-        dotnet restore "DeliveryValidationService.Api.csproj" --verbosity normal --no-cache; \
-    else \
-        echo "=== PROJECT FILE NOT FOUND ===" && \
-        echo "=== Available files ===" && find . -name "*.csproj" && \
-        exit 1; \
-    fi || \
+    dotnet restore "DeliveryValidationService/DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" --verbosity normal --no-cache || \
     (echo "=== RESTORE FAILED ===" && \
      echo "=== NuGet sources ===" && dotnet nuget list source && \
      exit 1)
 
-# Build with error handling - use the same logic to find the project
+# Build with error handling 
 RUN echo "=== Starting build ===" && \
-    if [ -f "DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" ]; then \
-        dotnet build "DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" -c Release -o /app/build --verbosity normal --no-restore; \
-    elif [ -f "DeliveryValidationService.Api.csproj" ]; then \
-        dotnet build "DeliveryValidationService.Api.csproj" -c Release -o /app/build --verbosity normal --no-restore; \
-    else \
-        echo "=== PROJECT FILE NOT FOUND FOR BUILD ===" && exit 1; \
-    fi || \
+    dotnet build "DeliveryValidationService/DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" -c Release -o /app/build --verbosity normal --no-restore || \
     (echo "=== BUILD FAILED ===" && \
      echo "=== Build logs ===" && find . -name "*.binlog" -exec dotnet build-server shutdown \; && \
      exit 1)
@@ -84,25 +68,13 @@ RUN echo "=== Starting build ===" && \
 FROM build AS publish
 # Publish with error handling and detailed output
 RUN echo "=== Starting publish ===" && \
-    if [ -f "DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" ]; then \
-        dotnet publish "DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" \
-            -c Release \
-            -o /app/publish \
-            /p:UseAppHost=false \
-            --no-restore \
-            --no-build \
-            --verbosity normal; \
-    elif [ -f "DeliveryValidationService.Api.csproj" ]; then \
-        dotnet publish "DeliveryValidationService.Api.csproj" \
-            -c Release \
-            -o /app/publish \
-            /p:UseAppHost=false \
-            --no-restore \
-            --no-build \
-            --verbosity normal; \
-    else \
-        echo "=== PROJECT FILE NOT FOUND FOR PUBLISH ===" && exit 1; \
-    fi || \
+    dotnet publish "DeliveryValidationService/DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" \
+        -c Release \
+        -o /app/publish \
+        /p:UseAppHost=false \
+        --no-restore \
+        --no-build \
+        --verbosity normal || \
     (echo "=== PUBLISH FAILED ===" && \
      echo "=== Checking publish directory ===" && ls -la /app/ && \
      echo "=== Looking for error logs ===" && find /app -name "*.log" -exec cat {} \; && \
