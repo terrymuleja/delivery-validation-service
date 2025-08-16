@@ -29,8 +29,12 @@ namespace DeliveryValidationService.Api.Controllers
             return result;
         }
 
+        /// <summary>
+        /// Get all validation results with status "Manual" (pending manual review).
+        /// </summary>
+        /// <returns></returns>
         [HttpGet("pending")]
-        public async Task<ActionResult<List<ValidationResult>>> GetPendingValidations()
+        public async Task<ActionResult<List<ValidationResult>>> GetPDendingValidations()
         {
             var results = await _context.ValidationResults
                 .Where(r => r.Status == ValidationStatus.Manual)
