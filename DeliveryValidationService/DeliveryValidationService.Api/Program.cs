@@ -29,9 +29,18 @@ builder.Services.AddSwaggerGen();
 
 // Database - Handle both Railway and local
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (builder.Environment.IsProduction())
+
+// Railway provides DATABASE_URL environment variable
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (!string.IsNullOrEmpty(databaseUrl))
 {
-    // Railway PostgreSQL connection
+    // Railway PostgreSQL connection using DATABASE_URL
+    connectionString = databaseUrl;
+    Log.Information("Using Railway DATABASE_URL for connection");
+}
+else if (builder.Environment.IsProduction())
+{
+    // Fallback: Individual PostgreSQL environment variables (if manually set)
     var pgHost = Environment.GetEnvironmentVariable("PGHOST");
     var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
     var pgUser = Environment.GetEnvironmentVariable("PGUSER");
@@ -41,7 +50,13 @@ if (builder.Environment.IsProduction())
     if (!string.IsNullOrEmpty(pgHost))
     {
         connectionString = $"Host={pgHost};Database={pgDatabase};Username={pgUser};Password={pgPassword};Port={pgPort};SSL Mode=Require;Trust Server Certificate=true";
+        Log.Information("Using individual PostgreSQL environment variables");
     }
+}
+
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("No database connection string found. Ensure DATABASE_URL environment variable is set or DefaultConnection is configured.");
 }
 
 builder.Services.AddDbContext<ValidationDbContext>(options =>
@@ -132,14 +147,49 @@ app.MapControllers();
 // Health check endpoint
 app.MapHealthChecks("/health");
 
-// Ensure database is created and migrated
+// IMPROVED: Database initialization with proper migration support
 using (var scope = app.Services.CreateScope())
 {
     try
     {
         var context = scope.ServiceProvider.GetRequiredService<ValidationDbContext>();
-        await context.Database.EnsureCreatedAsync();
-        Log.Information("Database initialized successfully");
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+        logger.LogInformation("Starting database initialization...");
+
+        // Check if migrations are pending
+        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+
+        if (pendingMigrations.Any())
+        {
+            logger.LogInformation("Applying {Count} pending migrations: {Migrations}",
+                pendingMigrations.Count(), string.Join(", ", pendingMigrations));
+
+            await context.Database.MigrateAsync();
+            logger.LogInformation("Database migrations applied successfully");
+        }
+        else
+        {
+            logger.LogInformation("No pending migrations found");
+
+            // Fallback: If no migrations exist, ensure database is created
+            var created = await context.Database.EnsureCreatedAsync();
+            if (created)
+            {
+                logger.LogInformation("Database created successfully (no migrations found)");
+            }
+            else
+            {
+                logger.LogInformation("Database already exists");
+            }
+        }
+
+        // Optional: Verify database connection
+        await context.Database.CanConnectAsync();
+        logger.LogInformation("Database connection verified successfully");
+
+        // Optional: Add any seeding logic here
+        // await SeedDataAsync(context, logger);
     }
     catch (Exception ex)
     {
@@ -154,3 +204,26 @@ app.Run();
 
 // Ensure proper cleanup
 Log.CloseAndFlush();
+
+// Optional: Add this method for seeding data
+/*
+static async Task SeedDataAsync(ValidationDbContext context, ILogger logger)
+{
+    try
+    {
+        // Add any initial data seeding logic here
+        // Example:
+        // if (!await context.SomeEntities.AnyAsync())
+        // {
+        //     context.SomeEntities.AddRange(GetInitialData());
+        //     await context.SaveChangesAsync();
+        //     logger.LogInformation("Initial data seeded successfully");
+        // }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to seed initial data");
+        // Don't throw here - seeding failure shouldn't stop the app
+    }
+}
+*/
