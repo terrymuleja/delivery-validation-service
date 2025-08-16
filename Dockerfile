@@ -47,10 +47,14 @@ RUN dotnet nuget locals all --clear
 
 # Restore with enhanced error handling
 RUN echo "=== Starting restore ===" && \
+    echo "=== Current working directory: $(pwd) ===" && \
+    echo "=== Checking if project file exists ===" && \
+    ls -la "DeliveryValidationService/DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" && \
     dotnet restore "DeliveryValidationService/DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" --verbosity normal --no-cache || \
     (echo "=== RESTORE FAILED ===" && \
      echo "=== NuGet sources ===" && dotnet nuget list source && \
-     echo "=== Available packages ===" && dotnet list package && \
+     echo "=== Current directory contents ===" && ls -la && \
+     echo "=== Project directory contents ===" && ls -la DeliveryValidationService/DeliveryValidationService.Api/ && \
      exit 1)
 
 # Build with error handling
