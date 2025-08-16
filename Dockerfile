@@ -1,4 +1,4 @@
-# Dockerfile optimized for Railway deployment - DeliveryValidationService
+# Dockerfile optimized for Railway deployment with NuGet authentication
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
@@ -32,12 +32,13 @@ RUN echo "=== Checking for csproj files ===" && find . -name "*.csproj" | head -
 # Configure NuGet authentication if GitHub credentials are provided
 RUN if [ ! -z "$GITHUB_USERNAME" ] && [ ! -z "$GITHUB_TOKEN" ]; then \
         echo "=== Configuring GitHub NuGet source ===" && \
-        dotnet nuget add source https://nuget.pkg.github.com/$GITHUB_USERNAME/index.json \
+        dotnet nuget add source "https://nuget.pkg.github.com/$GITHUB_USERNAME/index.json" \
             --name github \
-            --username $GITHUB_USERNAME \
-            --password $GITHUB_TOKEN \
+            --username "$GITHUB_USERNAME" \
+            --password "$GITHUB_TOKEN" \
             --store-password-in-clear-text && \
-        echo "GitHub NuGet source configured successfully"; \
+        echo "GitHub NuGet source configured successfully" && \
+        dotnet nuget list source; \
     else \
         echo "=== No GitHub credentials provided, skipping NuGet source configuration ==="; \
     fi
@@ -45,20 +46,15 @@ RUN if [ ! -z "$GITHUB_USERNAME" ] && [ ! -z "$GITHUB_TOKEN" ]; then \
 # Clear NuGet cache to avoid conflicts
 RUN dotnet nuget locals all --clear
 
-# Check what's in our working directory and find the project
-RUN echo "=== Current working directory contents ===" && \
-    pwd && ls -la && \
-    echo "=== Looking for .csproj files ===" && \
-    find . -name "*.csproj" -type f
-
-# Restore with enhanced error handling - use correct path from repo root
+# Restore with enhanced error handling
 RUN echo "=== Starting restore ===" && \
     dotnet restore "DeliveryValidationService/DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" --verbosity normal --no-cache || \
     (echo "=== RESTORE FAILED ===" && \
      echo "=== NuGet sources ===" && dotnet nuget list source && \
+     echo "=== Available packages ===" && dotnet list package && \
      exit 1)
 
-# Build with error handling 
+# Build with error handling
 RUN echo "=== Starting build ===" && \
     dotnet build "DeliveryValidationService/DeliveryValidationService.Api/DeliveryValidationService.Api.csproj" -c Release -o /app/build --verbosity normal --no-restore || \
     (echo "=== BUILD FAILED ===" && \
